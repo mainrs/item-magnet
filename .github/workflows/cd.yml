@@ -10,10 +10,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Extract tag
+        id: version
+        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+
       - name: Create zip file
         uses: montudor/action-zip@v0.1.0
         with:
-          args: zip -qq item-magnet-${{ github.ref }}.zip -r data pack.mcmeta LICENSE README.md
+          args: zip -qq item-magnet-${{ steps.version.outputs.VERSION }}.zip -r data pack.mcmeta LICENSE README.md
 
       - name: Create release
         id: create_release
@@ -32,6 +36,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./item-magnet-${{ github.ref }}.zip
-          asset_name: item-magnet-${{ github.ref }}.zip
+          asset_path: ./item-magnet-${{ steps.version.outputs.VERSION }}.zip
+          asset_name: item-magnet-${{ steps.version.outputs.VERSION }}.zip
           asset_content_type: application/zip
