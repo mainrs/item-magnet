@@ -1,8 +1,7 @@
 name: Continuous Deployment
 on:
   push:
-    branch: master
-    tag: "v*"
+    tags: "v*"
 
 jobs:
   create_data_pack:
@@ -11,13 +10,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Extract tag
-        id: version
-        run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
+        id: tag_version
+        run: echo ::set-output name=TAG_VERSION::${GITHUB_REF#refs/tags/}
+      - name: Extract MC verson
+        id: mc_version
+        run: sh .github/workflows/get-mc-version.sh
 
-      - name: Create zip file
+      - name: Create data pack zip file
         uses: montudor/action-zip@v0.1.0
         with:
-          args: zip -qq ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION }}.zip -r data pack.mcmeta LICENSE README.md
+          args: zip -qq datapack.zip -r data pack.mcmeta LICENSE README.md
+      - name: Create asset pack zip file
+        uses: montudor/action-zip@v0.1.0
+        with:
+          args: zip -qq assetpack.zip -r assets pack.mcmeta LICENSE README.md
 
       - name: Create release
         id: create_release
@@ -29,13 +35,22 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
+
+      - name: Upload assetpack release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION }}.zip
-          asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION }}.zip
+          asset_path: ./assetpack.zip
+          asset_name: ${{ github.event.repository.name }}-${{ steps.tag_version.outputs.TAG_VERSION }}-mc${{ steps.mc_version.outputs.MC_VERSION }}-resourcepack.zip
+          asset_content_type: application/zip
+      - name: Upload datapack release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./datapack.zip
+          asset_name: ${{ github.event.repository.name }}-${{ steps.tag_version.outputs.TAG_VERSION }}-mc${{ steps.mc_version.outputs.MC_VERSION }}-datapack.zip
           asset_content_type: application/zip
